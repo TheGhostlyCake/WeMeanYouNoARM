@@ -32,6 +32,16 @@ BLEDevice  ble;
 DigitalOut led1(LED1);
  
 UARTService *uartServicePtr;
+
+Serial interLink(USBTX, USBRX); // tx, rx```
+
+
+void sendTime(uint8_t h, uint8_t m, uint8_t s) {
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+    interLink.printf("%02d,%02d,%02d\n",r,g,b);
+}
  
 void disconnectionCallback(const Gap::DisconnectionCallbackParams_t *params)
 {
@@ -46,7 +56,10 @@ void onDataWritten(const GattWriteCallbackParams *params)
         uint16_t bytesRead = params->len;
         DEBUG("received %u bytes\n\r", bytesRead);
         ble.updateCharacteristicValue(uartServicePtr->getRXCharacteristicHandle(), params->data, bytesRead);
-        int thetime = atoi(bytesRead);
+        uint8_t h = *params->data;
+        uint8_t m = *(params->data+1);
+        uint8_t s = *(params->data+2);
+        sendTime(h,m,s);
         
     }
 }
