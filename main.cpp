@@ -17,11 +17,15 @@
 #include "mbed.h"
 #include "BLE.h"
 #include "BatteryService.h"
+#include "HeartRateService.h"
 
 DigitalOut led1(LED1, 1);
 Ticker t;
 BatteryService *batteryService = NULL;
+HeartRateService *hrsrv = NULL;
+
 uint8_t batteryLevel = 50;
+uint8_t heartRate = 50;
 
 void disconnectionCallback(const Gap::DisconnectionCallbackParams_t *disconnectionParams)
 {
@@ -48,6 +52,7 @@ void bleInitComplete(BLE::InitializationCompleteCallbackContext *params)
     gap.onDisconnection(disconnectionCallback);
 
     batteryService = new BatteryService(ble, batteryLevel);
+    hrsrv = new HeartRateService(ble, heartRate, 1);
 
     /* setup advertising */
     gap.accumulateAdvertisingPayload(GapAdvertisingData::BREDR_NOT_SUPPORTED | GapAdvertisingData::LE_GENERAL_DISCOVERABLE);
@@ -79,6 +84,7 @@ int main(void)
         }
 
         batteryService->updateBatteryLevel(batteryLevel);
+        hrsrv->updateHeartRate(heartRate);
     }
 }
 
