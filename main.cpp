@@ -40,12 +40,19 @@ uint8_t h = 12;
 uint8_t m = 0;
 uint8_t s = 0;
 
+uint8_t alarm_h;
+uint8_t alarm_m;
+uint8_t alarm_s;
+bool alarm=false;
+
 void sendNeo(uint8_t r, uint8_t g, uint8_t b) {
     interLink.printf("%02d,%02d,%02d\n",r,g,b);
 }
 
 void sendTime() {
     // this runs every second
+    
+    // Increment the time
     s++;
     if(s>59) {
         m++;
@@ -59,14 +66,25 @@ void sendTime() {
         s=0;
     }
     
+    // if we have an alarm enabled
+    if(alarm) {
+        if(alarm_s==s && alarm_m==m && alarm_h==h) {
+            // set the alarm off!
+            alarm=false;
+            interLink.printf("|\n"); // Send an alarm
+        }
+    }
     
+    //-----This block maps the time onto the neopixel
     uint8_t temp_s = (s/5)%60;
     if(temp_s==0) temp_s=12;
     uint8_t temp_m = (m/5)%60;
     if(temp_m==0) temp_m=12;
     uint8_t temp_h = h%13;
     if(h>12) temp_h++;
+    //-----------------------------------------
     sendNeo(temp_h,temp_s,temp_m);
+
 }
 
 void periodicCallback() {
@@ -92,6 +110,14 @@ void onDataWritten(const GattWriteCallbackParams *params)
             m = *(params->data+2);
             s = *(params->data+3);
         }
+        
+        else if (identifier==2) {
+            alarm_h = *(params->data+1);
+            alarm_m = *(params->data+2);
+            alarm_s = *(params->data+3);
+            alarm = 1;
+        }
+        
         else {
             int n;
             interLink.printf(";");
