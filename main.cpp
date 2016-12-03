@@ -18,6 +18,9 @@
 #include "BLE.h"
 #include "BatteryService.h"
 #include "HeartRateService.h"
+#include "MicroBit.h"
+
+MicroBit uBit;
 
 DigitalOut led1(LED1, 1);
 Ticker t;
@@ -87,6 +90,7 @@ int main(void)
 
         batteryService->updateBatteryLevel(batteryLevel);
         hrsrv->updateHeartRate(heartRate);
+        //uBit.accelerometer.getX()
     }
 }
 
