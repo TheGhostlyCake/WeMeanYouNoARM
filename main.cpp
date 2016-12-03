@@ -26,6 +26,7 @@ HeartRateService *hrsrv = NULL;
 
 uint8_t batteryLevel = 50;
 uint8_t heartRate = 50;
+const static char deviceName[] = "JoshWatch";
 
 void disconnectionCallback(const Gap::DisconnectionCallbackParams_t *disconnectionParams)
 {
@@ -56,6 +57,7 @@ void bleInitComplete(BLE::InitializationCompleteCallbackContext *params)
 
     /* setup advertising */
     gap.accumulateAdvertisingPayload(GapAdvertisingData::BREDR_NOT_SUPPORTED | GapAdvertisingData::LE_GENERAL_DISCOVERABLE);
+    ble.accumulateAdvertisingPayload(GapAdvertisingData::COMPLETE_LOCAL_NAME, (uint8_t*)deviceName, sizeof(deviceName));
     gap.setAdvertisingType(GapAdvertisingParams::ADV_CONNECTABLE_UNDIRECTED);
     gap.setAdvertisingInterval(1000); /* 1000ms; in multiples of 0.625ms. */
     gap.startAdvertising();
