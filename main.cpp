@@ -16,6 +16,7 @@
  
 #include "mbed.h"
 #include "ble/BLE.h"
+#include <string>
  
 #include "ble/services/UARTService.h"
  
@@ -33,14 +34,43 @@ DigitalOut led1(LED1);
  
 UARTService *uartServicePtr;
 
-Serial interLink(USBTX, USBRX); // tx, rx```
+Serial interLink(P0_2, P0_1); // tx, rx```
 
+uint8_t h = 12;
+uint8_t m = 0;
+uint8_t s = 0;
 
-void sendTime(uint8_t h, uint8_t m, uint8_t s) {
-    uint8_t r = 0;
-    uint8_t g = 0;
-    uint8_t b = 0;
+void sendNeo(uint8_t r, uint8_t g, uint8_t b) {
     interLink.printf("%02d,%02d,%02d\n",r,g,b);
+}
+
+void sendTime() {
+    // this runs every second
+    s++;
+    if(s>59) {
+        m++;
+        if(m>59) {
+            h++;
+            if(h>12) {
+                h=1;
+            }
+            m=0;
+        }
+        s=0;
+    }
+    
+    
+    uint8_t temp_s = (s/5)%60;
+    if(temp_s==0) temp_s=12;
+    uint8_t temp_m = (m/5)%60;
+    if(temp_m==0) temp_m=12;
+    uint8_t temp_h = h%13;
+    if(h>12) temp_h++;
+    sendNeo(temp_h,temp_s,temp_m);
+}
+
+void periodicCallback() {
+    sendTime();
 }
  
 void disconnectionCallback(const Gap::DisconnectionCallbackParams_t *params)
@@ -56,21 +86,28 @@ void onDataWritten(const GattWriteCallbackParams *params)
         uint16_t bytesRead = params->len;
         DEBUG("received %u bytes\n\r", bytesRead);
         ble.updateCharacteristicValue(uartServicePtr->getRXCharacteristicHandle(), params->data, bytesRead);
-        uint8_t h = *params->data;
-        uint8_t m = *(params->data+1);
-        uint8_t s = *(params->data+2);
-        sendTime(h,m,s);
+        uint8_t identifier = *params->data;
+        if(identifier==1) {
+            h = *(params->data+1);
+            m = *(params->data+2);
+            s = *(params->data+3);
+        }
+        else {
+            int n;
+            interLink.printf(";");
+            for(n=0; n<(bytesRead); n++) {
+                interLink.printf("%c", *(params->data+n));
+                }
+            interLink.printf("\n");
+        }
         
     }
 }
- 
-void periodicCallback(void)
-{
-    led1 = !led1;
-}
+
  
 int main(void)
 {
+    interLink.baud(115200);
     led1 = 1;
     Ticker ticker;
     ticker.attach(periodicCallback, 1);
