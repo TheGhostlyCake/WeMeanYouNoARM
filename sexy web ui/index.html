@@ -34,8 +34,7 @@ limitations under the License.
         }
       });
     </script>
-    
-    
+    <script src="moment.js"></script>
     
     <link rel="icon" href="icon.png">
     
@@ -248,12 +247,40 @@ function onDisconnected() {
 }
 
 function onSendTime() {
-  var buf = new ArrayBuffer(3);
+  var buf = new ArrayBuffer(4);
   var int8array = new Uint8Array(buf);
-  int8array[0] = 12;
-  int8array[1] = 10;
-  int8array[2] = 5;
+  var now = moment();
+  int8array[0] = 1;
+  int8array[1] = now.hour();
+  int8array[2] = now.minutes();
+  int8array[3] = now.seconds();
   writeCharacteristic.writeValue(buf);
+}
+
+function onSendAlarm() {
+  var buf = new ArrayBuffer(4);
+  var int8array = new Uint8Array(buf);
+  var now = moment();
+  int8array[0] = 2;
+  int8array[1] = parseInt(prompt("Hours: "));
+  int8array[2] = parseInt(prompt("Minutes: "));
+  int8array[3] = parseInt(prompt("Seconds: "));
+  writeCharacteristic.writeValue(buf);
+}
+
+function onSendString(thestring) {
+  var b2send = _base64ToArrayBuffer(btoa(thestring))
+  writeCharacteristic.writeValue(b2send);
+}
+
+function _base64ToArrayBuffer(base64) {
+    var binary_string =  window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array( len );
+    for (var i = 0; i < len; i++)        {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
 }
 
 /* Utils */
