@@ -52,8 +52,8 @@ limitations under the License.
       <a class="navbar-brand" href="index.html">SmartWatch</a>
     </div>
     <ul class="nav navbar-nav">
-      <li class="active"><a href="index.html">Home</a></li>
-      <li class=""><a href="debug.html">Debug</a></li>
+      <li class=""><a href="index.html">Home</a></li>
+      <li class="active"><a href="debug.html">Debug</a></li>
     </ul>
   </div>
 </nav>
@@ -68,8 +68,10 @@ limitations under the License.
 
 <br><br>
 
-<button class="btn btn-success" id="notifyme">Connect</button>
-<button class="btn btn-danger" id="reset">Disconnect</button>
+<button class="btn btn-success" id="readBatteryLevel">Read Bluetooth Device's Battery Level</button>
+<button class="btn btn-success" id="startNotifications" disabled>Start Notifications</button>
+<button class="btn btn-warning" id="stopNotifications" disabled>Stop Notifications</button>
+<button class="btn btn-danger" id="reset">Reset Bluetooth Device</button>
 
 
 <h3>Live Output</h3>
@@ -83,6 +85,7 @@ limitations under the License.
 
 
 </div>
+
 
 
 
@@ -119,8 +122,6 @@ limitations under the License.
       <script>
 var bluetoothDevice;
 var batteryLevelCharacteristic;
-
-document.querySelector('#reset').disabled = true;
 
 function onReadBatteryLevelButtonClick() {
   return (bluetoothDevice ? Promise.resolve() : requestDevice())
@@ -163,9 +164,8 @@ function connectDeviceAndCacheCharacteristics() {
     batteryLevelCharacteristic = characteristic;
     batteryLevelCharacteristic.addEventListener('characteristicvaluechanged',
         handleBatteryLevelChanged);
-    document.querySelector('#reset').disabled = false;
-    document.querySelector('#notifyme').disabled = true;
-    onStartNotificationsButtonClick(); //Start notifications also.
+    document.querySelector('#startNotifications').disabled = false;
+    document.querySelector('#stopNotifications').disabled = true;
   });
 }
 
@@ -182,8 +182,8 @@ function onStartNotificationsButtonClick() {
   batteryLevelCharacteristic.startNotifications()
   .then(_ => {
     log('> Notifications started');
-    document.querySelector('#reset').disabled = false;
-    document.querySelector('#notifyme').disabled = true;
+    document.querySelector('#startNotifications').disabled = true;
+    document.querySelector('#stopNotifications').disabled = false;
   })
   .catch(error => {
     log('Argh! ' + error);
@@ -210,11 +210,8 @@ function onResetButtonClick() {
     batteryLevelCharacteristic = null;
   }
   // Note that it doesn't disconnect device.
-  bluetoothDevice.gatt.disconnect();
   bluetoothDevice = null;
   log('> Bluetooth Device reset');
-  document.querySelector('#reset').disabled = true;
-  document.querySelector('#notifyme').disabled = false;
 }
 
 function onDisconnected() {
@@ -239,12 +236,21 @@ function anyNamedDevice() {
   
 
 <script>
-
-
-    document.querySelector('#notifyme').addEventListener('click', function() {
+  document.querySelector('#readBatteryLevel').addEventListener('click', function() {
     if (isWebBluetoothEnabled()) {
       onReadBatteryLevelButtonClick();
+    }
+  });
 
+  document.querySelector('#startNotifications').addEventListener('click', function(event) {
+    if (isWebBluetoothEnabled()) {
+      onStartNotificationsButtonClick();
+    }
+  });
+
+  document.querySelector('#stopNotifications').addEventListener('click', function(event) {
+    if (isWebBluetoothEnabled()) {
+      onStopNotificationsButtonClick();
     }
   });
 
