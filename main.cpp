@@ -1,5 +1,5 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2014 ARM Limited
+ * Copyright (c) 2006-2013 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,84 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 #include "mbed.h"
-#include "BLE.h"
-#include "BatteryService.h"
-#include "HeartRateService.h"
-#include "MicroBit.h"
-
-MicroBit uBit;
-
-DigitalOut led1(LED1, 1);
-Ticker t;
-BatteryService *batteryService = NULL;
-HeartRateService *hrsrv = NULL;
-
-uint8_t batteryLevel = 50;
-uint8_t heartRate = 50;
-const static char deviceName[] = "JoshWatch";
-
-void disconnectionCallback(const Gap::DisconnectionCallbackParams_t *disconnectionParams)
+#include "ble/BLE.h"
+ 
+#include "ble/services/UARTService.h"
+ 
+#define NEED_CONSOLE_OUTPUT 0 /* Set this if you need debug messages on the console;
+                               * it will have an impact on code-size and power consumption. */
+ 
+#if NEED_CONSOLE_OUTPUT
+#define DEBUG(...) { printf(__VA_ARGS__); }
+#else
+#define DEBUG(...) /* nothing */
+#endif /* #if NEED_CONSOLE_OUTPUT */
+ 
+BLEDevice  ble;
+DigitalOut led1(LED1);
+ 
+UARTService *uartServicePtr;
+ 
+void disconnectionCallback(const Gap::DisconnectionCallbackParams_t *params)
 {
-    printf("Disconnected handle %u!\n\r", disconnectionParams->handle);
-    printf("Restarting the advertising process\n\r");
-    BLE::Instance(BLE::DEFAULT_INSTANCE).gap().startAdvertising(); // restart advertising
+    DEBUG("Disconnected!\n\r");
+    DEBUG("Restarting the advertising process\n\r");
+    ble.startAdvertising();
 }
-
-void blink(void)
+ 
+void onDataWritten(const GattWriteCallbackParams *params)
+{
+    if ((uartServicePtr != NULL) && (params->handle == uartServicePtr->getTXCharacteristicHandle())) {
+        uint16_t bytesRead = params->len;
+        DEBUG("received %u bytes\n\r", bytesRead);
+        ble.updateCharacteristicValue(uartServicePtr->getRXCharacteristicHandle(), params->data, bytesRead);
+        int thetime = atoi(bytesRead);
+        
+    }
+}
+ 
+void periodicCallback(void)
 {
     led1 = !led1;
 }
-
-void bleInitComplete(BLE::InitializationCompleteCallbackContext *params)
-{
-    BLE &ble          = params->ble;
-    ble_error_t error = params->error;
-    Gap& gap = ble.gap();
-
-    if (error != BLE_ERROR_NONE) {
-        return;
-    }
-
-    gap.onDisconnection(disconnectionCallback);
-
-    batteryService = new BatteryService(ble, batteryLevel);
-    hrsrv = new HeartRateService(ble, heartRate, 1);
-
-    /* setup advertising */
-    gap.accumulateAdvertisingPayload(GapAdvertisingData::BREDR_NOT_SUPPORTED | GapAdvertisingData::LE_GENERAL_DISCOVERABLE);
-    ble.accumulateAdvertisingPayload(GapAdvertisingData::COMPLETE_LOCAL_NAME, (uint8_t*)deviceName, sizeof(deviceName));
-    gap.setAdvertisingType(GapAdvertisingParams::ADV_CONNECTABLE_UNDIRECTED);
-    gap.setAdvertisingInterval(1000); /* 1000ms; in multiples of 0.625ms. */
-    gap.startAdvertising();
-}
-
+ 
 int main(void)
 {
-    t.attach(blink, 1.0f);
-
-    printf("Initialising the nRF51822\n\r");
-
-    BLE& ble = BLE::Instance(BLE::DEFAULT_INSTANCE);
-    ble.init(bleInitComplete);
-
-    /* SpinWait for initialization to complete. This is necessary because the
-     * BLE object is used in the main loop below. */
-    while (ble.hasInitialized()  == false) { /* spin loop */ }
-
+    led1 = 1;
+    Ticker ticker;
+    ticker.attach(periodicCallback, 1);
+ 
+    DEBUG("Initialising the nRF51822\n\r");
+    ble.init();
+    ble.onDisconnection(disconnectionCallback);
+    ble.onDataWritten(onDataWritten);
+ 
+    /* setup advertising */
+    ble.accumulateAdvertisingPayload(GapAdvertisingData::BREDR_NOT_SUPPORTED);
+    ble.setAdvertisingType(GapAdvertisingParams::ADV_CONNECTABLE_UNDIRECTED);
+    ble.accumulateAdvertisingPayload(GapAdvertisingData::SHORTENED_LOCAL_NAME,
+                                     (const uint8_t *)"JoshWatch", sizeof("JoshWatch") - 1);
+    ble.accumulateAdvertisingPayload(GapAdvertisingData::COMPLETE_LIST_128BIT_SERVICE_IDS,
+                                     (const uint8_t *)UARTServiceUUID_reversed, sizeof(UARTServiceUUID_reversed));
+ 
+    ble.setAdvertisingInterval(500); /* 1000ms; in multiples of 0.625ms. */
+    ble.startAdvertising();
+ 
+    UARTService uartService(ble);
+    uartServicePtr = &uartService;
+ 
     while (true) {
-        ble.waitForEvent(); // this will return upon any system event (such as an interrupt or a ticker wakeup)
-
-        // the magic battery processing
-        batteryLevel++;
-        if (batteryLevel > 100) {
-            batteryLevel = 20;
-        }
-
-        batteryService->updateBatteryLevel(batteryLevel);
-        hrsrv->updateHeartRate(heartRate);
-        //uBit.accelerometer.getX()
+        ble.waitForEvent();
     }
 }
-

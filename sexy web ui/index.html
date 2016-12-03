@@ -70,6 +70,8 @@ limitations under the License.
 
 <button class="btn btn-success" id="notifyme">Connect</button>
 <button class="btn btn-danger" id="reset">Disconnect</button>
+<button class="btn btn-info" id="sendtime">Send Timesync</button>
+
 
 
 <h3>Live Output</h3>
@@ -119,6 +121,7 @@ limitations under the License.
       <script>
 var bluetoothDevice;
 var batteryLevelCharacteristic;
+var writeCharacteristic;
 
 document.querySelector('#reset').disabled = true;
 
@@ -126,8 +129,8 @@ function onReadBatteryLevelButtonClick() {
   return (bluetoothDevice ? Promise.resolve() : requestDevice())
   .then(connectDeviceAndCacheCharacteristics)
   .then(_ => {
-    log('Reading Battery Level...');
-    return batteryLevelCharacteristic.readValue();
+    log('Connected to device...');
+    return;
   })
   .catch(error => {
     log('Argh! ' + error);
@@ -137,7 +140,7 @@ function onReadBatteryLevelButtonClick() {
 function requestDevice() {
   log('Requesting Bluetooth Device...');
   return navigator.bluetooth.requestDevice(
-    {filters: anyNamedDevice(), optionalServices: ['battery_service']})
+    {filters: anyNamedDevice(), optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']})
   .then(device => {
     bluetoothDevice = device;
     bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
@@ -150,14 +153,33 @@ function connectDeviceAndCacheCharacteristics() {
   }
 
   log('Connecting to GATT Server...');
-  return bluetoothDevice.gatt.connect()
+
+
+
+
+  var a = bluetoothDevice.gatt.connect();
+
+  a
   .then(server => {
     log('Getting Battery Service...');
-    return server.getPrimaryService('battery_service');
+    return server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
   })
   .then(service => {
     log('Getting Battery Level Characteristic...');
-    return service.getCharacteristic('battery_level');
+    return service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+  })
+  .then(characteristic => {
+    writeCharacteristic = characteristic;
+  });
+
+  return a
+  .then(server => {
+    log('Getting Battery Service...');
+    return server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+  })
+  .then(service => {
+    log('Getting Battery Level Characteristic...');
+    return service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
   })
   .then(characteristic => {
     batteryLevelCharacteristic = characteristic;
@@ -174,7 +196,7 @@ function connectDeviceAndCacheCharacteristics() {
  * listener has been added. */
 function handleBatteryLevelChanged(event) {
   let batteryLevel = event.target.value.getUint8(0);
-  log('> Battery Level is ' + batteryLevel + '%');
+  log('> Read Data ' + batteryLevel);
 }
 
 function onStartNotificationsButtonClick() {
@@ -225,6 +247,15 @@ function onDisconnected() {
   });
 }
 
+function onSendTime() {
+  var buf = new ArrayBuffer(3);
+  var int8array = new Uint8Array(buf);
+  int8array[0] = 12;
+  int8array[1] = 10;
+  int8array[2] = 5;
+  writeCharacteristic.writeValue(buf);
+}
+
 /* Utils */
 
 function anyNamedDevice() {
@@ -244,6 +275,13 @@ function anyNamedDevice() {
     document.querySelector('#notifyme').addEventListener('click', function() {
     if (isWebBluetoothEnabled()) {
       onReadBatteryLevelButtonClick();
+
+    }
+  });
+
+        document.querySelector('#sendtime').addEventListener('click', function() {
+    if (isWebBluetoothEnabled()) {
+      onSendTime();
 
     }
   });
