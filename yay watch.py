@@ -115,7 +115,7 @@ while True:
             for num in range(len(np)):
                 np[num] = (20 if num==heading else 0,0,20 if num==heading else 0)
             np.show()
-    if(button_b.was_pressed() or line[0] == 166): # 166 = ¦
+    if(button_b.was_pressed() or (line is not None and line[0] == 42)): # 42 = *
         uart.write("oifeshlkmd")
         if(leds_crazy):
             music.stop(MUSIC_PIN)
