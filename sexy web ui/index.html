@@ -22,7 +22,7 @@ limitations under the License.
     <meta name="description" content="Sample illustrating the use of Web Bluetooth / Read Characteristic Value Changed.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <title>Web Bluetooth / Read Characteristic Value Changed Sample</title>
+    <title>The SmartWatch</title>
     <script>
       // Add a global error event listener early on in the page load, to help ensure that browsers
       // which don't support specific functionality still end up displaying a meaningful message.
@@ -35,7 +35,9 @@ limitations under the License.
       });
     </script>
     <script src="moment.js"></script>
-    
+    <script src="jquery.min.js"></script>
+    <script src="bootstrap.js"></script>
+
     <link rel="icon" href="icon.png">
     
     <link rel="stylesheet" href="bootstrap.min.css">
@@ -61,8 +63,8 @@ limitations under the License.
   
 <div class="col-md-10 col-md-offset-1">
   
-  <h1>SmartWatch Debug</h1>
-  <p>BBC Micro Bit Smart Watch</p>
+  <h1>SmartWatch</h1>
+  <p>A BBC Micro Bit Smart Watch with matching synchronised glasses</p>
 
 
 <br><br>
@@ -70,6 +72,9 @@ limitations under the License.
 <button class="btn btn-success" id="notifyme">Connect</button>
 <button class="btn btn-danger" id="reset">Disconnect</button>
 <button class="btn btn-info" id="sendtime">Send Timesync</button>
+<button class="btn btn-warning" data-toggle="modal" data-target="#myModal" id="alarmsend">Set Alarm</button>
+<button class="btn" data-toggle="modal" data-target="#myModal2" id="textsend">Send Text</button>
+<button class="btn btn-primary" id="glasses">Change Glasses</button>
 
 
 
@@ -86,7 +91,55 @@ limitations under the License.
 </div>
 
 
+<div id="myModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
 
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Set Alarm Time</h4>
+      </div>
+      <div class="modal-body">
+        <label>Hours:</label>
+        <input type="text" placeholder="hours" class="form-control" id='hours'>
+        <br>
+                <label>Minutes:</label>
+        <input type="text" placeholder="minutes" class="form-control" id='minutes'>
+        <br>
+                <label>Seconds:</label>
+        <input type="text" placeholder="seconds" class="form-control" id='seconds'>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal" id='save'>Save</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="myModal2" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Send text</h4>
+      </div>
+      <div class="modal-body">
+        <label>Hours:</label>
+        <input type="text" placeholder="My Message" class="form-control" id='themessage'>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal" id='savemessage'>Save</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 
 <script>
@@ -122,7 +175,12 @@ var bluetoothDevice;
 var batteryLevelCharacteristic;
 var writeCharacteristic;
 
+document.querySelector('#glasses').disabled = true;
+document.querySelector('#sendtime').disabled = true;
+document.querySelector('#glasses').disabled = true;
+document.querySelector('#textsend').disabled = true;
 document.querySelector('#reset').disabled = true;
+document.querySelector('#alarmsend').disabled = true;
 
 function onReadBatteryLevelButtonClick() {
   return (bluetoothDevice ? Promise.resolve() : requestDevice())
@@ -184,8 +242,6 @@ function connectDeviceAndCacheCharacteristics() {
     batteryLevelCharacteristic = characteristic;
     batteryLevelCharacteristic.addEventListener('characteristicvaluechanged',
         handleBatteryLevelChanged);
-    document.querySelector('#reset').disabled = false;
-    document.querySelector('#notifyme').disabled = true;
     onStartNotificationsButtonClick(); //Start notifications also.
   });
 }
@@ -204,6 +260,10 @@ function onStartNotificationsButtonClick() {
   .then(_ => {
     log('> Notifications started');
     document.querySelector('#reset').disabled = false;
+    document.querySelector('#alarmsend').disabled = false;
+    document.querySelector('#textsend').disabled = false;
+    document.querySelector('#glasses').disabled = false;
+    document.querySelector('#sendtime').disabled = false;
     document.querySelector('#notifyme').disabled = true;
   })
   .catch(error => {
@@ -232,7 +292,7 @@ function onResetButtonClick() {
   }
   // Note that it doesn't disconnect device.
   bluetoothDevice.gatt.disconnect();
-  bluetoothDevice = null;
+  setTimeout(function(){bluetoothDevice = null;}, 100);
   log('> Bluetooth Device reset');
   document.querySelector('#reset').disabled = true;
   document.querySelector('#notifyme').disabled = false;
@@ -262,9 +322,29 @@ function onSendAlarm() {
   var int8array = new Uint8Array(buf);
   var now = moment();
   int8array[0] = 2;
-  int8array[1] = parseInt(prompt("Hours: "));
-  int8array[2] = parseInt(prompt("Minutes: "));
-  int8array[3] = parseInt(prompt("Seconds: "));
+  int8array[1] = document.querySelector('#hours').value;
+  int8array[2] = document.querySelector('#minutes').value;
+  int8array[3] = document.querySelector('#seconds').value;
+  writeCharacteristic.writeValue(buf);
+}
+
+function onSendNotify() {
+  var buf = new ArrayBuffer(4);
+  var int8array = new Uint8Array(buf);
+  int8array[0] = 3;
+  int8array[1] = 0;
+  int8array[2] = 0;
+  int8array[3] = 0;
+  writeCharacteristic.writeValue(buf);
+}
+
+function onSendGlasses() {
+  var buf = new ArrayBuffer(4);
+  var int8array = new Uint8Array(buf);
+  int8array[0] = 4;
+  int8array[1] = 0;
+  int8array[2] = 0;
+  int8array[3] = 0;
   writeCharacteristic.writeValue(buf);
 }
 
@@ -318,6 +398,32 @@ function anyNamedDevice() {
       ChromeSamples.clearLog();
       onResetButtonClick();
     }
+  });
+
+
+  document.querySelector('#save').addEventListener('click', function(event) {
+    if (isWebBluetoothEnabled()) {
+      onSendAlarm();
+    }
+  });
+
+    document.querySelector('#savemessage').addEventListener('click', function(event) {
+    if (isWebBluetoothEnabled()) {
+      onSendString(document.querySelector('#themessage').value);
+    }
+  });
+
+        document.querySelector('#glasses').addEventListener('click', function(event) {
+    if (isWebBluetoothEnabled()) {
+      onSendGlasses();
+    }
+  });
+
+  document.querySelector('#alarmsend').addEventListener('click', function(event) {
+    var now2 = moment();
+    document.querySelector('#hours').value = now2.hour();
+    document.querySelector('#minutes').value = now2.minutes();
+    document.querySelector('#seconds').value = now2.seconds();
   });
 </script>
 

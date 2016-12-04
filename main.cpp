@@ -118,6 +118,14 @@ void onDataWritten(const GattWriteCallbackParams *params)
             alarm = 1;
         }
         
+        else if (identifier==3) {
+            interLink.printf("!\n");
+        }
+        
+        else if (identifier==4) {
+            interLink.printf("*\n");
+        }
+        
         else {
             int n;
             interLink.printf(";");
@@ -146,7 +154,7 @@ int main(void)
     /* setup advertising */
     ble.accumulateAdvertisingPayload(GapAdvertisingData::BREDR_NOT_SUPPORTED);
     ble.setAdvertisingType(GapAdvertisingParams::ADV_CONNECTABLE_UNDIRECTED);
-    ble.accumulateAdvertisingPayload(GapAdvertisingData::SHORTENED_LOCAL_NAME,
+    ble.accumulateAdvertisingPayload(GapAdvertisingData::COMPLETE_LOCAL_NAME,
                                      (const uint8_t *)"JoshWatch", sizeof("JoshWatch") - 1);
     ble.accumulateAdvertisingPayload(GapAdvertisingData::COMPLETE_LIST_128BIT_SERVICE_IDS,
                                      (const uint8_t *)UARTServiceUUID_reversed, sizeof(UARTServiceUUID_reversed));
