@@ -1,8 +1,8 @@
-# SET COMPASS CALIBRATE!!!!!!!!!!!!!
 from microbit import *
 import neopixel
 import music
 import random
+import radio
 MUSIC_PIN = pin1
 CLOCK_LEVEL = 100
 NOTIFICATION_COLOUR=[
@@ -28,7 +28,6 @@ musics=[
     music.NYAN,
     music.BIRTHDAY,
     music.WEDDING,
-#    music.FUNERAL,
     music.WAWAWAWAA]
 # Setup the Neopixel strip on pin0 with a length of 8 pixels
 np = neopixel.NeoPixel(pin0, 12)
@@ -36,7 +35,8 @@ compassMode=False
 leds_crazy=False
 led_level=0
 #compass.calibrate()
-
+radioFunctions=["torchOn","torchOff","spin"]
+radio_current=0
 def fun(i):
  for num in range(len(np)):
     np[num]=NOTIFICATION_COLOUR[num]
@@ -55,7 +55,8 @@ def fun(i):
 
 music.play(music.POWER_UP,pin=MUSIC_PIN,wait=False,loop=False)
 fun(2)
-
+radio.config(channel=89)
+radio.on()
 while True:
     buttonA=button_a.was_pressed()
     line=None
@@ -114,9 +115,14 @@ while True:
             for num in range(len(np)):
                 np[num] = (20 if num==heading else 0,0,20 if num==heading else 0)
             np.show()
-    if(button_b.was_pressed()):
-        music.stop(MUSIC_PIN)
-        leds_crazy=False
+    if(button_b.was_pressed() or line[0] == 166): # 166 = ¦
+        uart.write("oifeshlkmd")
+        if(leds_crazy):
+            music.stop(MUSIC_PIN)
+            leds_crazy=False
+        radio_current=(radio_current+1)%len(radioFunctions)
+        uart.write("\r\nradio %i\r\n"%radio_current)
+        radio.send(radioFunctions[radio_current])
     if(leds_crazy):
         led_level=0 if led_level==255 else 255
         for num in range(len(np)):
