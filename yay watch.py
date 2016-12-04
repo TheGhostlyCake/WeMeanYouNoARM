@@ -28,7 +28,7 @@ musics=[
     music.NYAN,
     music.BIRTHDAY,
     music.WEDDING,
-    music.FUNERAL,
+#    music.FUNERAL,
     music.WAWAWAWAA]
 # Setup the Neopixel strip on pin0 with a length of 8 pixels
 np = neopixel.NeoPixel(pin0, 12)
